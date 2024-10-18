@@ -6,4 +6,4 @@ podman run -it --name server --rm --net test -p 3000:3000 \
     -v "$CONTAINER_ROOT:$CONTAINER_ROOT" \
     --workdir "$CONTAINER_ROOT" \
     node:alpine \
-    server.js
+    npm install && npx nodemon server.js

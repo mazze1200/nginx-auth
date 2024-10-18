@@ -17,3 +17,12 @@ app.use(function (req, res, next) {
 app.listen(port, () => {
   console.log(`Express app listening at http://localhost:${port}`);
 });
+
+
+// const http = require("http");
+
+// const server = http.createServer(function (req, res) {});
+
+// server.listen(3000, function () {
+//   console.log("server started at port 3000");
+// });
