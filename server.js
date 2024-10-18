@@ -38,20 +38,20 @@ router.get('/', (req, res) => {
 });
 
 router.use((req, res, next) => {
-  res.status(404).send('protected route not found');
+    res.status(404).send('protected route not found');
 })
 
 app.use('/user', (req, res, next) => {
-  if (!req.headers.authorization ||
-    typeof req.headers.authorization !== 'string' ||
-    !req.headers.authorization.startsWith("Bearer gho_")) {
-    return res.status(403).json({ error: 'No credentials sent!' });
-  }
-  next();
+    if (!req.headers.authorization ||
+        typeof req.headers.authorization !== 'string' ||
+        !req.headers.authorization.startsWith("Bearer gho_")) {
+        return res.status(403).json({ error: 'No credentials sent!' });
+    }
+    next();
 }, router);
 
 app.use((req, res, next) => {
-  res.status(404).send('open route not found');
+    res.status(404).send('open route not found');
 })
 
 
