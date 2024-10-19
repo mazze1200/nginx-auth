@@ -74,10 +74,10 @@ router.use((req, res, next) => {
 })
 
 app.use('/user', (req, res, next) => {
-    console.log("[use user] ");
+    console.log("[use user] " + JSON.stringify(req.query) + " "  + JSON.stringify(req.headers) );
     if (!req.headers.authorization ||
         typeof req.headers.authorization !== 'string' ||
-        !req.headers.authorization.startsWith("Bearer gho_")) {
+        !req.headers.authorization.toLowerCase().startsWith("bearer gho_")) {
         return res.status(403).json({ error: 'No credentials sent!' });
     }
     next();

@@ -144,7 +144,7 @@ async function requestToken(r, code) {
     const body = JSON.stringify({ code: code })
     ngx.log(ngx.WARN, "[requestToken] body" + body);
 
-    let reply = await r.subrequest("/_oauth2_send_request", 'code=' + code,);
+    let reply = await r.subrequest("/github_access_token", 'code=' + code,);
 
     // let reply = await r.subrequest('/_oauth2_send_request')
 
@@ -163,10 +163,24 @@ async function requestToken(r, code) {
   }
 }
 
+async function user_info(r) {
+  ngx.log(ngx.WARN, "[user_info]")
+
+  let reply = await r.subrequest("/github_user_info");
+  // ngx.log(ngx.WARN, "[user_info] reply: " + JSON.stringify(reply))
+  let response = JSON.parse((reply.responseText));
+  let user = response['user'];
+
+  ngx.log(ngx.WARN, "[user_info] user: " + user)
+
+  r.headersOut['user'] = user;
+  return reply.status;
+}
 
 
-function authenticate(r) {
-  ngx.log(ngx.WARN, "[authenticate] " + JSON.stringify(r.variables))
+
+async function authenticate(r) {
+  ngx.log(ngx.WARN, "[authenticate] token " + JSON.stringify(r.variables.token))
 
   // r.headersOut['token'] = "HAllo";
   // r.headersOut['token_payload'] = "JSON.stringify(response)";
@@ -175,8 +189,9 @@ function authenticate(r) {
   // r.finish();
 
   if (r.variables.cookie_token) {
-    ngx.log(ngx.WARN, "[authenticate] token: " + r.variables.cookie_token);
-    r.return(200);
+    ngx.log(ngx.WARN, "[authenticate] cookie token: " + r.variables.cookie_token);
+    let status = await user_info(r);
+    r.return(status);
   }
   else {
     ngx.log(ngx.WARN, "[authenticate] no token");
@@ -198,8 +213,8 @@ async function login(r) {
   ngx.log(ngx.WARN, "[login] " + "token: " + token)
   // r.status = 204;
 
-  // r.headersOut['token'] = token;
-  // r.headersOut['Set-Cookie'] = "token=" + token;
+  r.headersOut['token'] = token;
+  r.headersOut['Set-Cookie'] = "token=" + token;
 
   r.return(204);
   // r.headersOut['token_payload'] = "JSON.stringify(response)";
