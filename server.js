@@ -8,7 +8,9 @@ app.get("/", (req, res) => {
 });
 
 app.get("/authorize", (req, res) => {
-    var url = new URL(`${req.protocol}://${req.get('host')}`);
+    // var url = new URL(`${req.protocol}://${req.get('host')}`);
+    
+    var url = new URL("http://192.168.20.32/_github_login");
     url.searchParams.set("code", "1234");
     console.log(url);
     res.redirect(302, url);
