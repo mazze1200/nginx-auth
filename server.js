@@ -4,6 +4,7 @@ const port = 3000;
 
 app.get("/", (req, res) => {
     // console.log(req.originalUrl)
+    console.log("[/] ");
     res.status(200).type("html").send("<h1>Hello World!<h1>");
 });
 
@@ -12,15 +13,42 @@ app.get("/authorize", (req, res) => {
     
     var url = new URL("http://192.168.20.32/_github_login");
     url.searchParams.set("code", "1234");
-    console.log(url);
+    console.log("[authorize] " + url);
     res.redirect(302, url);
 });
 
+
+// app.get("/access_token", (req, res) => {
+//     console.log("[access_token get] ");
+//     const code = req.query.code;
+//     // const code = req.body.code;
+
+//     console.log("[access_token] code:" + code);
+
+//     if (code && typeof code === 'string') {
+//         console.log(code);
+//         res.send({
+//             access_token: "gho_" + code,
+//             scope: "repo,gist",
+//             token_type: "bearer"
+//         });
+//     } else {
+//         console.log("code paramter is missing or not a string");
+//         res.send({});
+//     }
+// });
+
 app.post("/access_token", (req, res) => {
-    if (req.query.code && typeof req.query.code === 'string') {
-        console.log(req.query.code);
+    console.log("[access_token post] body: " + req.body + " query: " + JSON.stringify(req.query));
+    const code = req.query.code;
+    // const code = req.body.code;
+
+    console.log("[access_token] code:" + code);
+
+    if (code && typeof code === 'string') {
+        console.log(code);
         res.send({
-            access_token: "gho_" + req.query.code,
+            access_token: "gho_" + code,
             scope: "repo,gist",
             token_type: "bearer"
         });
@@ -33,6 +61,7 @@ app.post("/access_token", (req, res) => {
 const router = express.Router();
 
 router.get('/', (req, res) => {
+    console.log("[get user] ");
     res.send({
         user: "me",
         name: "Me, MyName"
@@ -40,10 +69,12 @@ router.get('/', (req, res) => {
 });
 
 router.use((req, res, next) => {
+    console.log("[router.use]");
     res.status(404).send('protected route not found');
 })
 
 app.use('/user', (req, res, next) => {
+    console.log("[use user] ");
     if (!req.headers.authorization ||
         typeof req.headers.authorization !== 'string' ||
         !req.headers.authorization.startsWith("Bearer gho_")) {
@@ -53,6 +84,7 @@ app.use('/user', (req, res, next) => {
 }, router);
 
 app.use((req, res, next) => {
+    console.log("[app.use]");
     res.status(404).send('open route not found');
 })
 

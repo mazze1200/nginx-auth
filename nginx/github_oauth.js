@@ -18,9 +18,7 @@ function getCode(r) {
   const requestUrl = r.variables.auth_request_uri;
   if (requestUrl) {
     ngx.log(ngx.WARN, "[getCode] " + JSON.stringify(requestUrl))
-
     const args = qs.parse(requestUrl.split('?')[1]);
-
     return args.code;
   }
   else {
@@ -29,7 +27,7 @@ function getCode(r) {
 }
 
 
-function requestToken(r, code) {
+function requestToken2(r, code) {
   ngx.log(ngx.WARN, "[requestToken] " + JSON.stringify(code))
   r.subrequest(
     '/_oauth2_send_login_request',
@@ -63,7 +61,6 @@ function requestToken(r, code) {
     }
   );
 }
-
 
 function verifyToken(r, token) {
   ngx.log(ngx.WARN, "[verifyToken] " + JSON.stringify(token))
@@ -129,31 +126,47 @@ function tokenResult(r, response) {
   // Iterate over all members of the response and return them as response headers
   r.headersOut['token'] = response.token;
   r.headersOut['token_payload'] = JSON.stringify(response);
-  r.status = 204;
-  r.sendHeader();
-  r.finish();
+  // r.status = 204;
+  // r.sendHeader();
+  // r.finish();
+  r.return(204);
 }
+
+
+async function requestToken(r, code) {
+  ngx.log(ngx.WARN, "[requestToken] ");
+
+  // await new Promise(r => setTimeout(r, 2000));
+
+  try {
+    // let reply = await r.subrequest('http://github:3000/access_token', `code=${code}`)
+
+    const body = JSON.stringify({ code: code })
+    ngx.log(ngx.WARN, "[requestToken] body" + body);
+
+    let reply = await r.subrequest("/_oauth2_send_request", 'code=' + code,);
+
+    // let reply = await r.subrequest('/_oauth2_send_request')
+
+    ngx.log(ngx.WARN, "[requestToken] we are here ");
+    let response = JSON.parse((reply.responseText));
+    let token = response['access_token'];
+
+    if (!token) {
+      throw new Error("[requestToken] token is not available");
+    }
+
+    ngx.log(ngx.WARN, "[requestToken] " + JSON.stringify(token));
+    return token;
+  } catch (e) {
+    r.return(500, e);
+  }
+}
+
 
 
 function authenticate(r) {
-  ngx.log(ngx.WARN, "[authenticate] " + JSON.stringify(r))
-
-  // r.headersOut['token'] = "HAllo";
-  // r.headersOut['token_payload'] = "JSON.stringify(response)";
-  r.status = 200;
-  r.sendHeader();
-  r.finish();
-}
-
-
-
-function login(r) {
-  ngx.log(ngx.WARN, "[login] " + JSON.stringify(r))
-
-  const code = getCode(r);
-  return requestToken(r, code);
-
-
+  ngx.log(ngx.WARN, "[authenticate] " + JSON.stringify(r.variables))
 
   // r.headersOut['token'] = "HAllo";
   // r.headersOut['token_payload'] = "JSON.stringify(response)";
@@ -161,7 +174,40 @@ function login(r) {
   // r.sendHeader();
   // r.finish();
 
+  if (r.variables.cookie_token) {
+    ngx.log(ngx.WARN, "[authenticate] token: " + r.variables.cookie_token);
+    r.return(200);
+  }
+  else {
+    ngx.log(ngx.WARN, "[authenticate] no token");
+    r.return(401);
+  }
+}
 
+
+
+async function login(r) {
+  ngx.log(ngx.WARN, "[login] " + JSON.stringify(r))
+
+  const code = getCode(r);
+  if (!code) {
+    throw new Error("code is not rpvided to login");
+  }
+  let token = await requestToken(r, code);
+
+  ngx.log(ngx.WARN, "[login] " + "token: " + token)
+  // r.status = 204;
+
+  // r.headersOut['token'] = token;
+  // r.headersOut['Set-Cookie'] = "token=" + token;
+
+  r.return(204);
+  // r.headersOut['token_payload'] = "JSON.stringify(response)";
+  // r.status = 204;
+  // r.sendHeader();
+  // r.finish();
+
+  // r.internalRedirect('/');
 }
 
 export default { authenticate, login };
