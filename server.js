@@ -60,11 +60,22 @@ app.post("/access_token", (req, res) => {
 
 const router = express.Router();
 
+const team_router = express.Router();
+
 router.get('/', (req, res) => {
-    console.log("[get user] ");
+    console.log("[get user] " + req.url);
     res.send({
-        user: "me",
+        login: "me",
         name: "Me, MyName"
+    });
+});
+
+
+
+team_router.get('/', (req, res) => {
+    console.log("[team memvership] ");
+    res.send({
+        state: "active"
     });
 });
 
@@ -83,8 +94,18 @@ app.use('/user', (req, res, next) => {
     next();
 }, router);
 
+app.use('/orgs/mazzeorg/teams/my_team/memberships/', (req, res, next) => {
+    console.log("[app membership] " + JSON.stringify(req.query) + " "  + JSON.stringify(req.headers) );
+    if (!req.headers.authorization ||
+        typeof req.headers.authorization !== 'string' ||
+        !req.headers.authorization.toLowerCase().startsWith("bearer gho_")) {
+        return res.status(403).json({ error: 'No credentials sent!' });
+    }
+    next();
+}, team_router);
+
 app.use((req, res, next) => {
-    console.log("[app.use]");
+    console.log("[app.use] " + req.url);
     res.status(404).send('open route not found');
 })
 

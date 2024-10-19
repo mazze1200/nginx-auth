@@ -169,12 +169,30 @@ async function user_info(r) {
   let reply = await r.subrequest("/github_user_info");
   // ngx.log(ngx.WARN, "[user_info] reply: " + JSON.stringify(reply))
   let response = JSON.parse((reply.responseText));
-  let user = response['user'];
+  let login = response['login'];
 
-  ngx.log(ngx.WARN, "[user_info] user: " + user)
+  ngx.log(ngx.WARN, "[user_info] login: " + login)
 
-  r.headersOut['user'] = user;
+  r.headersOut['login'] = login;
   return reply.status;
+}
+
+async function check_team_membership(r) {
+  ngx.log(ngx.WARN, "[check_team_membership]")
+
+  let reply = await r.subrequest("/github_team_membership");
+  if (reply.status === 200) {
+    let response = JSON.parse((reply.responseText));
+    let state = response['state'];
+
+    ngx.log(ngx.WARN, "[check_team_membership] state: " + state)
+
+    return state === "active";
+  }
+
+  ngx.log(ngx.WARN, "[check_team_membership] not a member");
+
+  return false;
 }
 
 
@@ -191,6 +209,15 @@ async function authenticate(r) {
   if (r.variables.cookie_token) {
     ngx.log(ngx.WARN, "[authenticate] cookie token: " + r.variables.cookie_token);
     let status = await user_info(r);
+    if (status === 200) {
+      let membership_status = await check_team_membership(r);
+      if(membership_status){
+        r.return(200);
+      }else{
+        r.return(403, "User is not a member of the team");
+      }
+      return;
+    }
     r.return(status);
   }
   else {
