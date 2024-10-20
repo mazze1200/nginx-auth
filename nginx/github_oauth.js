@@ -15,6 +15,9 @@ function error(r, error, httpCode) {
 }
 
 function getCode(r) {
+  ngx.log(ngx.WARN, "[getCode] " + JSON.stringify(r.headersIn))
+
+
   const requestUrl = r.variables.auth_request_uri;
   if (requestUrl) {
     ngx.log(ngx.WARN, "[getCode] " + JSON.stringify(requestUrl))
@@ -163,6 +166,34 @@ async function requestToken(r, code) {
   }
 }
 
+
+function to_lower_case(r, data, flags) {
+  r.sendBuffer(data.toLowerCase(), flags);
+}
+
+function sync_user_info(r, data, flags) {
+  ngx.log(ngx.WARN, "[sync_user_info]")
+  r.sendBuffer(data.toLowerCase(), flags);
+
+  // throw new Error("code is not rpvided to login");
+
+  // ngx.log(ngx.WARN, "[sync_user_info]")
+
+  // let response = JSON.parse((data));
+  // let login = response['login'];
+
+  // ngx.log(ngx.WARN, "[user_info] login: " + login)
+
+  // r.headersOut['login'] = login;
+  // r.headersOut['X-login'] = login;
+
+}
+
+function hello_header_filter(r) {
+  ngx.log(ngx.WARN, "[hello_header_filter]")
+}
+
+
 async function user_info(r) {
   ngx.log(ngx.WARN, "[user_info]")
 
@@ -211,9 +242,9 @@ async function authenticate(r) {
     let status = await user_info(r);
     if (status === 200) {
       let membership_status = await check_team_membership(r);
-      if(membership_status){
+      if (membership_status) {
         r.return(200);
-      }else{
+      } else {
         r.return(403, "User is not a member of the team");
       }
       return;
@@ -252,4 +283,51 @@ async function login(r) {
   // r.internalRedirect('/');
 }
 
-export default { authenticate, login };
+
+
+
+function sync_requestToken(r, code) {
+  ngx.log(ngx.WARN, "[sync_requestToken] ");
+
+  r.subrequest("/github_access_token", 'code=' + code,
+    function (reply) {
+      ngx.log(ngx.WARN, "[sync_requestToken] reply");
+      if (reply.status !== 200)
+        return error('OAuth unexpected response from authorization server (HTTP ' + reply.status + '). ' + reply.responseBody, 500);
+
+      try {
+        let response = JSON.parse((reply.responseText));
+        let token = response['access_token'];
+
+        if (!token) {
+          r.return(500, "Toke is missing in reply");
+          return;
+        }
+
+        ngx.log(ngx.WARN, "[sync_requestToken] " + JSON.stringify(token));
+
+        r.headersOut['token'] = token;
+        r.headersOut['Set-Cookie'] = "token=" + token;
+        r.return(204);
+      } catch (e) {
+        r.return(500, e);
+      }
+    }
+  );
+}
+
+function sync_login(r) {
+  ngx.log(ngx.WARN, "[sync_login] " + JSON.stringify(r))
+
+  if (r.args && r.args.code && typeof r.args.code === 'string') {
+    sync_requestToken(r, r.args.code);
+  } else {
+    throw new Error("Code is not provided to login");
+  }
+}
+
+
+
+
+
+export default { authenticate, login, sync_user_info, hello_header_filter, to_lower_case, sync_login };
