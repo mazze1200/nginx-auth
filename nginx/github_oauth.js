@@ -36,10 +36,7 @@ function sync_requestToken(r, code) {
 
         r.headersOut['token'] = token;
         r.headersOut['Set-Cookie'] = "token=" + token;
-        // ngx.log(ngx.WARN, "[sync_requestToken] orig_request_uri:" + r.variables.orig_request_uri);
 
-        // r.return(204);        
-        // r.internalRedirect("/rewrite");
         r.return(302, "/rewrite");
       } catch (e) {
         r.return(500, e);
