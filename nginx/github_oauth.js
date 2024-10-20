@@ -14,6 +14,15 @@ function error(r, error, httpCode) {
   r.return(httpCode);
 }
 
+function get_kv(zone){
+  const kv = zone && ngx.shared && ngx.shared[zone];
+  if (!kv) {
+    throw new Error("JS Zone does not exist");
+  }
+
+  return kv;
+}
+
 function sync_requestToken(r, code) {
   ngx.log(ngx.WARN, "[sync_requestToken]");
 
@@ -37,11 +46,7 @@ function sync_requestToken(r, code) {
         r.headersOut['token'] = token;
         r.headersOut['Set-Cookie'] = "token=" + token;
 
-        const zone = r.variables['github_state_zone_name'];
-        const kv = zone && ngx.shared && ngx.shared[zone];
-        if (!kv) {
-          throw new Error("JS Zone does not exist");
-        }
+        const kv = get_kv(r.variables['github_state_zone_name']);
 
         const state = r.args.state;
         if (kv.has(state)) {
@@ -71,54 +76,60 @@ function sync_login(r) {
   }
 }
 
-
 function sync_authenticate(r) {
   if (r.variables.cookie_token) {
     ngx.log(ngx.WARN, "[sync_authenticate] cookie token: " + r.variables.cookie_token);
 
-    r.subrequest("/github_user_info",
-      function (reply) {
-        ngx.log(ngx.WARN, "[sync_authenticate][github_user_info] reply");
-        if (reply.status !== 200)
-          return error(r, 'OAuth unexpected response from authorization server (HTTP ' + reply.status + '). ' + reply.responseBody, reply.status);
+    const kv = get_kv(r.variables['github_loggedin_zone_name']);
 
-        let response = JSON.parse((reply.responseText));
-        let login = response['login'];
+    const logged_in_key = r.variables.github_team + " " + r.variables.cookie_token;
 
-        ngx.log(ngx.WARN, "[user_info] login: " + login)
+    if (kv.has(logged_in_key)) {
+      return r.return(200);
+    } else {
+      r.subrequest("/github_user_info",
+        function (reply) {
+          ngx.log(ngx.WARN, "[sync_authenticate][github_user_info] reply");
+          if (reply.status !== 200)
+            return error(r, 'OAuth unexpected response from authorization server (HTTP ' + reply.status + '). ' + reply.responseBody, reply.status);
 
-        r.headersOut['login'] = login;
+          let response = JSON.parse((reply.responseText));
+          let login = response['login'];
 
-        r.subrequest("/github_team_membership",
-          function (reply) {
-            ngx.log(ngx.WARN, "[sync_authenticate][github_team_membership] reply");
-            if (reply.status === 200) {
-              let response = JSON.parse((reply.responseText));
-              let state = response['state'];
+          ngx.log(ngx.WARN, "[user_info] login: " + login)
 
-              ngx.log(ngx.WARN, "[check_team_membership] state: " + state)
+          r.headersOut['login'] = login;
 
-              if (state === "active") {
-                r.return(200);
+          r.subrequest("/github_team_membership",
+            function (reply) {
+              ngx.log(ngx.WARN, "[sync_authenticate][github_team_membership] reply");
+              if (reply.status === 200) {
+                let response = JSON.parse((reply.responseText));
+                let state = response['state'];
+
+                ngx.log(ngx.WARN, "[check_team_membership] state: " + state)
+
+                if (state === "active") {
+                  kv.set(logged_in_key, "logged_ing");
+
+                  r.return(200);
+                } else {
+                  r.return(403, "User is not a member of the team");
+                }
               } else {
-                r.return(403, "User is not a member of the team");
+                error(r, "Error checking team membership", reply.status);
               }
-            } else {
-              error(r, "Error checking team membership", reply.status);
-            }
-          });
-      }
-    );
+            });
+        }
+      );
+    }
   } else {
     return error(r, "Missing Token", 401);
   }
 }
+
 function store_uri(r) {
-  const zone = r.variables['github_state_zone_name'];
-  const kv = zone && ngx.shared && ngx.shared[zone];
-  if (!kv) {
-    throw new Error("JS Zone does not exist");
-  }
+  const kv = get_kv(r.variables['github_state_zone_name']);
 
   const random = crypto.getRandomValues(new Uint8Array(32));
   const random_string = Buffer.from(random).toString('base64url')
