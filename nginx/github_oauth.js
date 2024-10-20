@@ -42,12 +42,18 @@ function sync_requestToken(r, code) {
         if (!kv) {
           throw new Error("JS Zone does not exist");
         }
-        const request_uri = kv.get(r.args.state);
 
-        ngx.log(ngx.WARN, "[sync_requestToken] state: " + r.args.state + "=" + request_uri);
+        const state = r.args.state;
+        if (kv.has(state)) {
+          const request_uri = kv.get(state);
+          kv.delete(state);
 
-        r.return(302, request_uri);
-        // r.internalRedirect("/rewrite");
+          ngx.log(ngx.WARN, "[sync_requestToken] state: " + state + "=" + request_uri);
+
+          r.return(302, request_uri);
+        } else {
+          r.return(500, "State provided from Github is not known");
+        }
       } catch (e) {
         r.return(500, e);
       }
@@ -67,9 +73,6 @@ function sync_login(r) {
 
 
 function sync_authenticate(r) {
-  // ngx.log(ngx.WARN, "[sync_authenticate]request_uri: " + r.variables['request_uri']);
-
-
   if (r.variables.cookie_token) {
     ngx.log(ngx.WARN, "[sync_authenticate] cookie token: " + r.variables.cookie_token);
 
@@ -111,25 +114,20 @@ function sync_authenticate(r) {
   }
 }
 function store_uri(r) {
-  if (r.variables['state']) {
-    return r.variables['state'];
+  const zone = r.variables['github_state_zone_name'];
+  const kv = zone && ngx.shared && ngx.shared[zone];
+  if (!kv) {
+    throw new Error("JS Zone does not exist");
   }
-  else {
-    const zone = r.variables['github_state_zone_name'];
-    const kv = zone && ngx.shared && ngx.shared[zone];
-    if (!kv) {
-      throw new Error("JS Zone does not exist");
-    }
 
-    const random = crypto.getRandomValues(new Uint8Array(32));
-    const random_string = Buffer.from(random).toString('base64url')
-    const request_uri = r.variables['request_uri'];
-    kv.set(random_string, request_uri);
+  const random = crypto.getRandomValues(new Uint8Array(32));
+  const random_string = Buffer.from(random).toString('base64url')
+  const request_uri = r.variables['request_uri'];
+  kv.set(random_string, request_uri);
 
-    ngx.log(ngx.WARN, "[store_uri] " + random_string + "=" + request_uri);
+  ngx.log(ngx.WARN, "[store_uri] " + random_string + "=" + request_uri);
 
-    return random_string;
-  }
+  return random_string;
 }
 
 function randrom(r) {
@@ -138,25 +136,4 @@ function randrom(r) {
   return random_string;
 }
 
-function get_request_uri(r) {
-  ngx.log(ngx.WARN, "[get_request_uri]");
-  const zone = r.variables['github_state_zone_name'];
-  const kv = zone && ngx.shared && ngx.shared[zone];
-  if (!kv) {
-    throw new Error("JS Zone does not exist");
-  }
-
-  const request_uri = r.variables['state'];
-
-  ngx.log(ngx.WARN, "[get_request_uri] state=" + request_uri);
-
-  return kv.get(request_uri);
-}
-
-/// This is the wrong direction, it goes from backend to browser and not from broser/ngins to backend 
-// function cookies_filter(r) {
-//   var cookies = r.headersOut['Set-Cookie'];
-//   r.headersOut['Set-Cookie'] = cookies.filter(v=>v === "token");
-// }
-
-export default { sync_login, sync_authenticate, randrom, store_uri, get_request_uri };
+export default { sync_login, sync_authenticate, randrom, store_uri };
