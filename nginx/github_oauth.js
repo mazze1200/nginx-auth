@@ -308,8 +308,11 @@ function sync_requestToken(r, code) {
 
         r.headersOut['token'] = token;
         r.headersOut['Set-Cookie'] = "token=" + token;
-        return r.return(204);
-        // r.internalRedirect("/_github_authenticate");
+        // ngx.log(ngx.WARN, "[sync_requestToken] orig_request_uri:" + r.variables.orig_request_uri);
+        
+        // r.return(204);        
+        // r.internalRedirect("/rewrite");
+        r.return(302, "/rewrite");
       } catch (e) {
         r.return(500, e);
       }
@@ -331,7 +334,6 @@ function sync_login(r) {
 function sync_authenticate(r) {
   if (r.variables.cookie_token) {
     ngx.log(ngx.WARN, "[sync_authenticate] cookie token: " + r.variables.cookie_token);
-
 
     r.subrequest("/github_user_info",
       function (reply) {
@@ -356,21 +358,25 @@ function sync_authenticate(r) {
               ngx.log(ngx.WARN, "[check_team_membership] state: " + state)
 
               if (state === "active") {
-                return r.return(200);
+                r.return(200);
               } else {
-                return r.return(403, "User is not a member of the team");
+                r.return(403, "User is not a member of the team");
               }
             } else {
-              return error(r, "Error checking team membership", reply.status);
+              error(r, "Error checking team membership", reply.status);
             }
           });
       }
     );
-  }else{
+  } else {
     return error(r, "Missing Token", 401);
   }
 }
 
+function randrom(r) {
+  const random = crypto.getRandomValues(new Uint8Array(32));
+  const random_string = Buffer.from(random).toString('base64url')
+  return random_string;
+}
 
-
-export default { authenticate, login, sync_user_info, hello_header_filter, to_lower_case, sync_login, sync_authenticate };
+export default { authenticate, login, sync_user_info, hello_header_filter, to_lower_case, sync_login, sync_authenticate, randrom };
