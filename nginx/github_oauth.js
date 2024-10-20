@@ -83,8 +83,12 @@ function sync_authenticate(r) {
     const kv = get_kv(r.variables['github_loggedin_zone_name']);
 
     const logged_in_key = r.variables.github_team + " " + r.variables.cookie_token;
+    const logged_in_val = kv.get(logged_in_key);
 
-    if (kv.has(logged_in_key)) {
+    if (logged_in_val) {
+      // we are storing the user name in as the value of the team+token combination. 
+      // The user name is not dependant of the team (only of the token) but it helps reducing complexity (at the cost of ... logic).
+      r.headersOut['login'] = logged_in_val;
       return r.return(200);
     } else {
       r.subrequest("/github_user_info",
@@ -110,7 +114,7 @@ function sync_authenticate(r) {
                 ngx.log(ngx.WARN, "[check_team_membership] state: " + state)
 
                 if (state === "active") {
-                  kv.set(logged_in_key, "logged_ing");
+                  kv.set(logged_in_key, login);
 
                   r.return(200);
                 } else {
