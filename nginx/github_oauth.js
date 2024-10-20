@@ -287,7 +287,7 @@ async function login(r) {
 
 
 function sync_requestToken(r, code) {
-  ngx.log(ngx.WARN, "[sync_requestToken] ");
+  ngx.log(ngx.WARN, "[sync_requestToken]");
 
   r.subrequest("/github_access_token", 'code=' + code,
     function (reply) {
@@ -308,7 +308,8 @@ function sync_requestToken(r, code) {
 
         r.headersOut['token'] = token;
         r.headersOut['Set-Cookie'] = "token=" + token;
-        r.return(204);
+        return r.return(204);
+        // r.internalRedirect("/_github_authenticate");
       } catch (e) {
         r.return(500, e);
       }
@@ -327,7 +328,49 @@ function sync_login(r) {
 }
 
 
+function sync_authenticate(r) {
+  if (r.variables.cookie_token) {
+    ngx.log(ngx.WARN, "[sync_authenticate] cookie token: " + r.variables.cookie_token);
+
+
+    r.subrequest("/github_user_info",
+      function (reply) {
+        ngx.log(ngx.WARN, "[sync_authenticate][github_user_info] reply");
+        if (reply.status !== 200)
+          return error(r, 'OAuth unexpected response from authorization server (HTTP ' + reply.status + '). ' + reply.responseBody, reply.status);
+
+        let response = JSON.parse((reply.responseText));
+        let login = response['login'];
+
+        ngx.log(ngx.WARN, "[user_info] login: " + login)
+
+        r.headersOut['login'] = login;
+
+        r.subrequest("/github_team_membership",
+          function (reply) {
+            ngx.log(ngx.WARN, "[sync_authenticate][github_team_membership] reply");
+            if (reply.status === 200) {
+              let response = JSON.parse((reply.responseText));
+              let state = response['state'];
+
+              ngx.log(ngx.WARN, "[check_team_membership] state: " + state)
+
+              if (state === "active") {
+                return r.return(200);
+              } else {
+                return r.return(403, "User is not a member of the team");
+              }
+            } else {
+              return error(r, "Error checking team membership", reply.status);
+            }
+          });
+      }
+    );
+  }else{
+    return error(r, "Missing Token", 401);
+  }
+}
 
 
 
-export default { authenticate, login, sync_user_info, hello_header_filter, to_lower_case, sync_login };
+export default { authenticate, login, sync_user_info, hello_header_filter, to_lower_case, sync_login, sync_authenticate };
