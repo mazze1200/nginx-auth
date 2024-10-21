@@ -87,7 +87,10 @@ function sync_authenticate(r) {
     if (logged_in_val) {
       // we are storing the user name in as the value of the team+token combination. 
       // The user name is not dependant of the team (only of the token) but it helps reducing complexity (at the cost of ... logic).
-      r.headersOut['login'] = logged_in_val;
+      const response = JSON.parse((logged_in_val));
+      r.headersOut['login'] = response.login;
+      r.headersOut['name'] = response.name;
+      
       return r.return(200);
     } else {
       r.subrequest("/_github_user_info",
@@ -98,10 +101,12 @@ function sync_authenticate(r) {
 
           const response = JSON.parse((reply.responseText));
           const login = response['login'];
+          const name = response['name'];
 
-          ngx.log(ngx.WARN, "[user_info] login: " + login)
+          ngx.log(ngx.WARN, "[user_info] login: " + login + ", name: " + name);
 
           r.headersOut['login'] = login;
+          r.headersOut['name'] = name;
 
           r.subrequest("/_github_team_membership",
             function (reply) {
@@ -113,7 +118,10 @@ function sync_authenticate(r) {
                 ngx.log(ngx.WARN, "[check_team_membership] state: " + state)
 
                 if (state === "active") {
-                  kv.set(logged_in_key, login);
+                  kv.set(logged_in_key, JSON.stringify({
+                    login: login,
+                    name: name
+                  }));
 
                   r.return(200);
                 } else {
