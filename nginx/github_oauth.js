@@ -42,7 +42,6 @@ function sync_requestToken(r, code) {
 
         ngx.log(ngx.WARN, "[sync_requestToken] " + JSON.stringify(token));
 
-        // r.headersOut['token'] = token;
         r.headersOut['Set-Cookie'] = "token=" + token;
 
         const kv = get_kv(r.variables['github_state_zone_name']);

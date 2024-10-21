@@ -62,7 +62,13 @@ router.get('/user', (req, res) => {
 
 
 router.get('/orgs/:org/teams/:team/memberships/:login', (req, res) => {
-    console.log("[team memvership] team: " +req.params.team + " | " + req.originalUrl);
+    console.log("[team memvership] team: " + req.params.team + " | " + req.originalUrl);
+
+    const allowed_groups = new Set(["my_team"]);
+
+    if (!allowed_groups.has(req.params.team)) {
+        res.status(403).send('Not am member of group ' + req.params.team);
+    }
     res.send({
         state: "active"
     });
