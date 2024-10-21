@@ -13,7 +13,7 @@ app.get("/authorize", (req, res) => {
 
     // var url = new URL(`${req.protocol}://${req.get('host')}`);
     
-    var url = new URL("http://192.168.20.32/_github_login");
+    var url = new URL("http://192.168.20.32/github_login_callback");
     url.searchParams.set("code", "1234");
     url.searchParams.set("state", req.query.state);
 

@@ -14,7 +14,7 @@ function error(r, error, httpCode) {
   r.return(httpCode);
 }
 
-function get_kv(zone){
+function get_kv(zone) {
   const kv = zone && ngx.shared && ngx.shared[zone];
   if (!kv) {
     throw new Error("JS Zone does not exist");
@@ -26,7 +26,7 @@ function get_kv(zone){
 function sync_requestToken(r, code) {
   ngx.log(ngx.WARN, "[sync_requestToken]");
 
-  r.subrequest("/github_access_token", 'code=' + code,
+  r.subrequest("/_github_access_token", 'code=' + code,
     function (reply) {
       ngx.log(ngx.WARN, "[sync_requestToken] reply");
       if (reply.status !== 200)
@@ -37,8 +37,7 @@ function sync_requestToken(r, code) {
         const token = response['access_token'];
 
         if (!token) {
-          r.return(500, "Toke is missing in reply");
-          return;
+          return r.return(500, "Toke is missing in reply");
         }
 
         ngx.log(ngx.WARN, "[sync_requestToken] " + JSON.stringify(token));
@@ -91,7 +90,7 @@ function sync_authenticate(r) {
       r.headersOut['login'] = logged_in_val;
       return r.return(200);
     } else {
-      r.subrequest("/github_user_info",
+      r.subrequest("/_github_user_info",
         function (reply) {
           ngx.log(ngx.WARN, "[sync_authenticate][github_user_info] reply");
           if (reply.status !== 200)
@@ -104,7 +103,7 @@ function sync_authenticate(r) {
 
           r.headersOut['login'] = login;
 
-          r.subrequest("/github_team_membership",
+          r.subrequest("/_github_team_membership",
             function (reply) {
               ngx.log(ngx.WARN, "[sync_authenticate][github_team_membership] reply");
               if (reply.status === 200) {
@@ -128,7 +127,7 @@ function sync_authenticate(r) {
       );
     }
   } else {
-    return error(r, "Missing Token", 401);
+    error(r, "Missing Token", 401);
   }
 }
 
@@ -140,15 +139,10 @@ function store_uri(r) {
   const request_uri = r.variables['request_uri'];
   kv.set(random_string, request_uri);
 
-  ngx.log(ngx.WARN, "[store_uri] " + random_string + "=" + request_uri);
+  ngx.log(ngx.WARN, "[store_uri] github state" + random_string + "=" + request_uri);
 
   return random_string;
 }
 
-function randrom(r) {
-  const random = crypto.getRandomValues(new Uint8Array(32));
-  const random_string = Buffer.from(random).toString('base64url')
-  return random_string;
-}
 
-export default { sync_login, sync_authenticate, randrom, store_uri };
+export default { sync_login, sync_authenticate, store_uri };
