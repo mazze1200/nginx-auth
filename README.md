@@ -16,10 +16,10 @@ A minimal server example may look like this
 include github_http.conf;
 
 server {
-	listen 443 ssl;
+    listen 443 ssl;
     listen [::]:443 ssl;
 
-	server_name secure.example.org;
+    server_name secure.example.org;
 
     # Include ssl certs
     include ssl_certs.conf;
@@ -28,11 +28,11 @@ server {
     include auth_github.conf;
     include github_server.conf;
 
-	location / {        
+    location / {        
         # Include this for locations that need authentication
         include github_location.conf;
         set $github_team "access-sample";
-		proxy_pass http://whoami;
+        proxy_pass http://whoami;
     }
 
     # redirect server error pages to the static page /50x.html
