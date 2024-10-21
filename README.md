@@ -5,6 +5,11 @@ It is highly inspired by
 https://github.com/specify/nginx-with-github-auth
 
 ## Config
+In your nginx.conf include 
+```code
+load_module modules/ngx_http_js_module.so;
+```
+
 A minimal server example may look like this 
 ```code
 # Include this at the nginx http level
