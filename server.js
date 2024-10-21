@@ -2,6 +2,13 @@ const express = require("express");
 const app = express();
 const port = 3000;
 
+const myLogger = function (req, res, next) {
+    console.log('LOGGED: ' + req.originalUrl)
+    next()
+}
+app.use(myLogger);
+
+
 app.get("/", (req, res) => {
     // console.log(req.originalUrl)
     console.log("[/] ");
@@ -12,7 +19,7 @@ app.get("/authorize", (req, res) => {
     console.log("[authorize] query: " + JSON.stringify(req.query));
 
     // var url = new URL(`${req.protocol}://${req.get('host')}`);
-    
+
     var url = new URL("http://192.168.20.32/github_login_callback");
     url.searchParams.set("code", "1234");
     url.searchParams.set("state", req.query.state);
@@ -21,26 +28,6 @@ app.get("/authorize", (req, res) => {
     res.redirect(302, url);
 });
 
-
-// app.get("/access_token", (req, res) => {
-//     console.log("[access_token get] ");
-//     const code = req.query.code;
-//     // const code = req.body.code;
-
-//     console.log("[access_token] code:" + code);
-
-//     if (code && typeof code === 'string') {
-//         console.log(code);
-//         res.send({
-//             access_token: "gho_" + code,
-//             scope: "repo,gist",
-//             token_type: "bearer"
-//         });
-//     } else {
-//         console.log("code paramter is missing or not a string");
-//         res.send({});
-//     }
-// });
 
 app.post("/access_token", (req, res) => {
     console.log("[access_token post] body: " + req.body + " query: " + JSON.stringify(req.query));
@@ -64,10 +51,8 @@ app.post("/access_token", (req, res) => {
 
 const router = express.Router();
 
-const team_router = express.Router();
-
-router.get('/', (req, res) => {
-    console.log("[get user] " + req.url);
+router.get('/user', (req, res) => {
+    console.log("[get user] " + req.url + " | " + req.originalUrl);
     res.send({
         login: "my_cool_login",
         name: "Me, MyName"
@@ -76,20 +61,20 @@ router.get('/', (req, res) => {
 
 
 
-team_router.get('/', (req, res) => {
-    console.log("[team memvership] ");
+router.get('/orgs/:org/teams/:team/memberships/:login', (req, res) => {
+    console.log("[team memvership] team: " +req.params.team + " | " + req.originalUrl);
     res.send({
         state: "active"
     });
 });
 
 router.use((req, res, next) => {
-    console.log("[router.use]");
+    console.log("[router.use]" + " | " + req.originalUrl);
     res.status(404).send('protected route not found');
 })
 
-app.use('/user', (req, res, next) => {
-    console.log("[use user] " + JSON.stringify(req.query) + " "  + JSON.stringify(req.headers) );
+app.use('/', (req, res, next) => {
+    console.log("[use user] " + JSON.stringify(req.query) + " " + JSON.stringify(req.headers) + " | " + req.originalUrl);
     if (!req.headers.authorization ||
         typeof req.headers.authorization !== 'string' ||
         !req.headers.authorization.toLowerCase().startsWith("bearer gho_")) {
@@ -98,31 +83,12 @@ app.use('/user', (req, res, next) => {
     next();
 }, router);
 
-app.use('/orgs/mazzeorg/teams/my_team/memberships/', (req, res, next) => {
-    console.log("[app membership] " + JSON.stringify(req.query) + " "  + JSON.stringify(req.headers) );
-    if (!req.headers.authorization ||
-        typeof req.headers.authorization !== 'string' ||
-        !req.headers.authorization.toLowerCase().startsWith("bearer gho_")) {
-        return res.status(403).json({ error: 'No credentials sent!' });
-    }
-    next();
-}, team_router);
-
 app.use((req, res, next) => {
-    console.log("[app.use] " + req.url);
+    console.log("[app.use] " + req.url + " | " + req.originalUrl);
     res.status(404).send('open route not found');
 })
-
 
 app.listen(port, () => {
     console.log(`Express app listening at http://localhost:${port}`);
 });
 
-
-// const http = require("http");
-
-// const server = http.createServer(function (req, res) {});
-
-// server.listen(3000, function () {
-//   console.log("server started at port 3000");
-// });
