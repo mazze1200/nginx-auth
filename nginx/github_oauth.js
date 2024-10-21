@@ -42,7 +42,7 @@ function sync_requestToken(r, code) {
 
         ngx.log(ngx.WARN, "[sync_requestToken] " + JSON.stringify(token));
 
-        r.headersOut['token'] = token;
+        // r.headersOut['token'] = token;
         r.headersOut['Set-Cookie'] = "token=" + token;
 
         const kv = get_kv(r.variables['github_state_zone_name']);
@@ -96,8 +96,8 @@ function sync_authenticate(r) {
           if (reply.status !== 200)
             return error(r, 'OAuth unexpected response from authorization server (HTTP ' + reply.status + '). ' + reply.responseBody, reply.status);
 
-          let response = JSON.parse((reply.responseText));
-          let login = response['login'];
+          const response = JSON.parse((reply.responseText));
+          const login = response['login'];
 
           ngx.log(ngx.WARN, "[user_info] login: " + login)
 
