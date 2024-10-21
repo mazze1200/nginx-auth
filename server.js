@@ -69,7 +69,7 @@ const team_router = express.Router();
 router.get('/', (req, res) => {
     console.log("[get user] " + req.url);
     res.send({
-        login: "me",
+        login: "my_cool_login",
         name: "Me, MyName"
     });
 });
