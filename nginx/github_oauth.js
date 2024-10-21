@@ -90,7 +90,7 @@ function sync_authenticate(r) {
       const response = JSON.parse((logged_in_val));
       r.headersOut['login'] = response.login;
       r.headersOut['name'] = response.name;
-      
+
       return r.return(200);
     } else {
       r.subrequest("/_github_user_info",
@@ -108,7 +108,7 @@ function sync_authenticate(r) {
           r.headersOut['login'] = login;
           r.headersOut['name'] = name;
 
-          r.subrequest("/_github_team_membership",
+          r.subrequest("/_github_team_membership", "login=" + login,
             function (reply) {
               ngx.log(ngx.WARN, "[sync_authenticate][github_team_membership] reply");
               if (reply.status === 200) {
